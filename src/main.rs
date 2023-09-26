@@ -39,6 +39,7 @@ async fn main() {
 
     let args = Args::parse();
 
+    // generate config and exit if flag is present
     if args.generate_config.is_some() {
         println!("Generating config...");
         match generate_config(&args.generate_config.unwrap().join(" "), port) {
@@ -93,7 +94,6 @@ fn generate_config(cs_folder_path: &str, port: u16) -> io::Result<()> {
         }}"#, port = port};
 
     let mut file = File::create(format!("{}/csgo/cfg/{}", cs_folder_path, gsi_config_name))?;
-
     file.write_all(gsi_config.as_bytes())?;
 
     Ok(())
@@ -105,6 +105,7 @@ async fn handle_payload(
     // as JSON into a `Payload` type
     Json(payload): Json<Payload>,
 ) -> StatusCode {
+    // play/pause music based on round phase and player state
     match payload.round.phase {
         RoundPhase::FreezeTime | RoundPhase::Over => {
             play_pause(state, false).await;
@@ -119,8 +120,8 @@ async fn handle_payload(
     StatusCode::OK
 }
 
-// check if player has 0 health or is spectating
 fn is_alive(payload: Payload) -> bool {
+    // check if player is not spectating and is alive
     payload.provider.steam_id == payload.player.steam_id && payload.player.state.unwrap().health > 0
 }
 
@@ -136,6 +137,7 @@ async fn play_pause(state: Arc<RwLock<AppState>>, pause: bool) {
         );
 
         let mut w_state = state.write().await;
+        // simulate media play/pause key press
         w_state.enigo.key_click(Key::MediaPlayPause);
         w_state.is_playing = !pause;
 
