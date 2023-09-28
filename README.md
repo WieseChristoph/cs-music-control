@@ -9,7 +9,7 @@
 
 ## Description
 
-This program expects that your background music is already playing. It will pause the music when a round starts and unpause when you are dead or in between rounds. It simulates pressing of the media-keys so make sure they do what they should (on Windows this should work without a problem).
+This program expects that your background music is already playing. It will pause the music when a round starts and unpause when you are dead or in between rounds. It simulates pressing of the media-keys so make sure they do what they should.
 
 > [!WARNING]
 > This program does not detect quitting from matches, so it will stay in the state it was before quitting.
@@ -18,16 +18,27 @@ This program expects that your background music is already playing. It will paus
 
 You can build the program with `cargo build`.
 
-In order to function, a gamestate integration configuration file is needed. This file must be located at `<CS:GO-Folder-Path>\csgo\cfg`. To automatically generate one, you can run the following command on Windows
+In order to function, a gamestate integration configuration file is needed. To automatically generate one, you can run the following command
 
 ```text
-cs-music-control.exe -g <CS-Folder-Path>
+cs-music-control.exe -g
 ```
 
-The CS:GO-Folder-Path usually is `C:\Program Files (x86)\Steam\steamapps\common\Counter-Strike Global Offensive`.
+This will automatically find your CS installation folder.
 
-To start the program on Windows, just run `cs-music-control.exe`.
+You can also provide your own CS installation path.
+
+```text
+cs-music-control.exe -g <CS_INSTALLATION_PATH>
+```
+
+To start the program, just run
+
+```text
+cs-music-control.exe
+```
 
 ## Credits
 
 - [gsi-csgo](https://github.com/sam-ai56/gsi-csgo) for the payload structs
+- [u/Bkid](https://www.reddit.com/r/GlobalOffensive/comments/cjhcpy/game_state_integration_a_very_large_and_indepth/) for a great explanation of GSI
