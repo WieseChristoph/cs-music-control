@@ -1,11 +1,12 @@
 use serde::Deserialize;
 
 #[derive(Deserialize, Clone, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Player {
     #[serde(rename = "steamid")]
     pub steam_id: String,
-    pub clan: Option<String>,
     pub name: String,
+    pub clan: Option<String>,
     pub observer_slot: Option<u8>,
     pub team: Option<super::team::Team>,
     pub activity: Activity,

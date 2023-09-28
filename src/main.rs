@@ -5,25 +5,16 @@ use chrono::Local;
 use clap::Parser;
 use enigo::{Enigo, Key, KeyboardControllable};
 use indoc::formatdoc;
+use keyvalues_parser::Vdf;
 use payload::{round::RoundPhase, Payload};
-use std::{
-    fs::File,
-    io::{self, Write},
-    net::SocketAddr,
-    sync::Arc,
-};
+use std::{fs::File, io::Write, net::SocketAddr, sync::Arc};
 use tokio::sync::RwLock;
+use winreg::{enums::*, RegKey};
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(
-        short,
-        long,
-        value_name = "CS_FOLDER_PATH",
-        help = "Path to CS installation folder",
-        num_args = 0..
-    )]
+    #[arg(short, long, value_name = "OPTIONAL_CS_INSTALLATION_PATH", help = "Generate config file for CS", num_args = 0..)]
     generate_config: Option<Vec<String>>,
 }
 
@@ -42,7 +33,11 @@ async fn main() {
     // generate config and exit if flag is present
     if args.generate_config.is_some() {
         println!("Generating config...");
-        match generate_config(&args.generate_config.unwrap().join(" "), port) {
+        let cs_folder_path = match args.generate_config.unwrap() {
+            path if path.is_empty() => get_cs_folder_path().expect("Couldn't get CS folder path"),
+            path => path.join(" "),
+        };
+        match generate_config(port, cs_folder_path) {
             Ok(_) => println!("Config generated!"),
             Err(e) => eprintln!("Error generating config: {}", e),
         }
@@ -73,7 +68,7 @@ async fn main() {
         .unwrap();
 }
 
-fn generate_config(cs_folder_path: &str, port: u16) -> io::Result<()> {
+fn generate_config(port: u16, cs_folder_path: String) -> Result<(), Box<dyn std::error::Error>> {
     let gsi_config_name = "gamestate_integration_music_control.cfg";
     let gsi_config = formatdoc! {r#"
         "Music Control v.1"
@@ -93,10 +88,65 @@ fn generate_config(cs_folder_path: &str, port: u16) -> io::Result<()> {
             }}
         }}"#, port = port};
 
-    let mut file = File::create(format!("{}/csgo/cfg/{}", cs_folder_path, gsi_config_name))?;
+    let config_path = format!("{}\\csgo\\cfg\\{}", cs_folder_path, gsi_config_name);
+    println!("Creating config at: {}", config_path);
+    let mut file = File::create(config_path)?;
     file.write_all(gsi_config.as_bytes())?;
 
     Ok(())
+}
+
+fn get_cs_folder_path() -> Result<String, Box<dyn std::error::Error>> {
+    let steam_folder_path = get_steam_folder_path();
+
+    // extract library folders from libraryfolders.vdf
+    let library_folders_vdf_path = format!("{}/steamapps/libraryfolders.vdf", steam_folder_path);
+    let library_folders_vdf_text = std::fs::read_to_string(library_folders_vdf_path)?;
+    let library_folders_vdf = Vdf::parse(&library_folders_vdf_text)?;
+    let library_folders = library_folders_vdf
+        .value
+        .get_obj()
+        .ok_or("Couldn't get library folders object")?;
+
+    // iterate through library folders and find CS folder path
+    for (_key, value) in library_folders {
+        let library_folder = value[0]
+            .get_obj()
+            .ok_or("Couldn't get library folder object")?;
+        let apps = library_folder.get("apps").ok_or("Couldn't get apps")?[0]
+            .get_obj()
+            .ok_or("Couldn't get apps object")?;
+
+        // check if CS is installed in this library folder
+        if apps.contains_key("730") {
+            let library_folder_path = library_folder
+                .get("path")
+                .ok_or("Couldn't get library path")?[0]
+                .get_str()
+                .ok_or("Couldn't get library path string")?;
+            let cs_folder_path = format!(
+                "{}\\steamapps\\common\\Counter-Strike Global Offensive",
+                library_folder_path
+            );
+
+            return Ok(cs_folder_path);
+        }
+    }
+
+    Err("Couldn't find CS folder path".into())
+}
+
+fn get_steam_folder_path() -> String {
+    // get Steam folder path from registry
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let steam_key = hkcu
+        .open_subkey("SOFTWARE\\Valve\\Steam")
+        .expect("Couldn't open Steam registry key");
+    let steam_path: String = steam_key
+        .get_value("SteamPath")
+        .expect("Couldn't get SteamPath");
+
+    return steam_path;
 }
 
 async fn handle_payload(

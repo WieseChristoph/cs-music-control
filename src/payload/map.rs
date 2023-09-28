@@ -1,6 +1,7 @@
 use serde::Deserialize;
 
 #[derive(Deserialize, Clone, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Map {
     pub mode: Mode,
     pub name: String,
@@ -9,8 +10,8 @@ pub struct Map {
     pub team_ct: super::team::TeamInfo,
     pub team_t: super::team::TeamInfo,
     pub num_matches_to_win_series: u8,
-    pub current_spectators: u8,
-    pub souvenirs_total: u8,
+    pub current_spectators: Option<u8>,
+    pub souvenirs_total: Option<u8>,
 }
 
 #[derive(Deserialize, Clone, Debug)]

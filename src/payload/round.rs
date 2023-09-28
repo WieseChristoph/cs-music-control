@@ -1,6 +1,7 @@
 use serde::Deserialize;
 
 #[derive(Deserialize, Clone, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Round {
     pub phase: RoundPhase,
     pub bomb: Option<BombState>,

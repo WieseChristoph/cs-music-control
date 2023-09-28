@@ -7,6 +7,7 @@ pub enum Team {
 }
 
 #[derive(Deserialize, Clone, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct TeamInfo {
     pub score: u8,
     pub consecutive_round_losses: u8,
