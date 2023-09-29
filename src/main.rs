@@ -7,6 +7,7 @@ use enigo::{Enigo, Key, KeyboardControllable};
 use indoc::formatdoc;
 use keyvalues_parser::Vdf;
 use payload::{round::RoundPhase, Payload};
+use std::path::Path;
 use std::{fs::File, io::Write, net::SocketAddr, sync::Arc};
 use tokio::sync::RwLock;
 use winreg::{enums::*, RegKey};
@@ -88,7 +89,16 @@ fn generate_config(port: u16, cs_folder_path: String) -> Result<(), Box<dyn std:
             }}
         }}"#, port = port};
 
-    let config_path = format!("{}\\csgo\\cfg\\{}", cs_folder_path, gsi_config_name);
+    let config_path = format!(
+        "{}\\game\\{}\\cfg\\{}",
+        cs_folder_path,
+        if cs_folder_path.contains("Counter-Strike Global Offensive") {
+            "csgo"
+        } else {
+            "cs2"
+        },
+        gsi_config_name
+    );
     println!("Creating config at: {}", config_path);
     let mut file = File::create(config_path)?;
     file.write_all(gsi_config.as_bytes())?;
@@ -124,12 +134,15 @@ fn get_cs_folder_path() -> Result<String, Box<dyn std::error::Error>> {
                 .ok_or("Couldn't get library path")?[0]
                 .get_str()
                 .ok_or("Couldn't get library path string")?;
-            let cs_folder_path = format!(
-                "{}\\steamapps\\common\\Counter-Strike Global Offensive",
-                library_folder_path
-            );
 
-            return Ok(cs_folder_path);
+            // check for both CS:GO and CS 2 folders
+            for dir_name in ["Counter-Strike Global Offensive", "Counter-Strike 2"] {
+                let cs_folder_path =
+                    format!("{}\\steamapps\\common\\{}", library_folder_path, dir_name);
+                if Path::new(&cs_folder_path).exists() {
+                    return Ok(cs_folder_path);
+                }
+            }
         }
     }
 
