@@ -119,7 +119,7 @@ fn get_cs_folder_path() -> Result<String, Box<dyn std::error::Error>> {
         .ok_or("Couldn't get library folders object")?;
 
     // iterate through library folders and find CS folder path
-    for (_key, value) in library_folders {
+    for value in library_folders.values() {
         let library_folder = value[0]
             .get_obj()
             .ok_or("Couldn't get library folder object")?;
@@ -159,7 +159,7 @@ fn get_steam_folder_path() -> String {
         .get_value("SteamPath")
         .expect("Couldn't get SteamPath");
 
-    return steam_path;
+    steam_path
 }
 
 async fn handle_payload(
