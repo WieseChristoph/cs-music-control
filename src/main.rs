@@ -15,6 +15,13 @@ use winreg::{enums::*, RegKey};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
+    #[arg(
+        short,
+        long,
+        help = "Custom port to listen on / generate config with",
+        default_value = "3000"
+    )]
+    port: u16,
     #[arg(short, long, value_name = "OPTIONAL_CS_INSTALLATION_PATH", help = "Generate config file for CS", num_args = 0..)]
     generate_config: Option<Vec<String>>,
 }
@@ -27,9 +34,9 @@ struct AppState {
 
 #[tokio::main]
 async fn main() {
-    let port = 3000;
-
     let args = Args::parse();
+
+    let port = args.port;
 
     // generate config and exit if flag is present
     if args.generate_config.is_some() {
