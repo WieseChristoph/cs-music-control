@@ -6,7 +6,7 @@ use clap::Parser;
 use enigo::{Enigo, Key, KeyboardControllable};
 use indoc::formatdoc;
 use keyvalues_parser::Vdf;
-use payload::{round::RoundPhase, Payload};
+use payload::{player::Activity, round::RoundPhase, Payload};
 use std::path::Path;
 use std::{fs::File, io::Write, net::SocketAddr, sync::Arc};
 use tokio::sync::RwLock;
@@ -168,13 +168,22 @@ async fn handle_payload(
     // as JSON into a `Payload` type
     Json(payload): Json<Payload>,
 ) -> StatusCode {
-    // play/pause music based on round phase and player state
-    match payload.round.phase {
-        RoundPhase::FreezeTime | RoundPhase::Over => {
+    // play/pause music based on player activity
+    match payload.player.activity {
+        // this is mainly to handle the case where the player quits the match/game
+        Activity::Menu | Activity::TextInput => {
             play_pause(state, false).await;
         }
-        RoundPhase::Live => {
-            play_pause(state, is_alive(payload.clone())).await;
+        Activity::Playing => {
+            // play/pause music based on round phase and player state
+            match payload.round.phase {
+                RoundPhase::FreezeTime | RoundPhase::Over => {
+                    play_pause(state, false).await;
+                }
+                RoundPhase::Live => {
+                    play_pause(state, is_alive(payload.clone())).await;
+                }
+            }
         }
     }
 
