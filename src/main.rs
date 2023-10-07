@@ -1,6 +1,6 @@
 mod payload;
 
-use axum::{http::StatusCode, routing::post, Extension, Json, Router};
+use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
 use chrono::Local;
 use clap::Parser;
 use enigo::{Enigo, Key, KeyboardControllable};
@@ -26,10 +26,10 @@ struct Args {
     generate_config: Option<Vec<String>>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct AppState {
-    enigo: Enigo,
-    is_playing: bool,
+    enigo: Arc<RwLock<Enigo>>,
+    is_playing: Arc<RwLock<bool>>,
 }
 
 #[tokio::main]
@@ -52,10 +52,10 @@ async fn main() {
         return;
     }
 
-    let state = Arc::new(RwLock::new(AppState {
-        enigo: Enigo::new(),
-        is_playing: true,
-    }));
+    let state = AppState {
+        enigo: Arc::new(RwLock::new(Enigo::new())),
+        is_playing: Arc::new(RwLock::new(true)),
+    };
 
     // initialize tracing
     tracing_subscriber::fmt::init();
@@ -65,7 +65,7 @@ async fn main() {
     let app = Router::new()
         // `POST /` goes to `handle_payload`
         .route("/", post(handle_payload))
-        .layer(Extension(state));
+        .with_state(state);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     tracing::debug!("listening on {}", addr);
@@ -170,7 +170,7 @@ fn get_steam_folder_path() -> String {
 }
 
 async fn handle_payload(
-    Extension(state): Extension<Arc<RwLock<AppState>>>,
+    State(state): State<AppState>,
     // this argument tells axum to parse the request body
     // as JSON into a `Payload` type
     Json(payload): Json<Payload>,
@@ -204,10 +204,10 @@ fn is_alive(payload: Payload) -> bool {
     payload.provider.steam_id == payload.player.steam_id && payload.player.state.unwrap().health > 0
 }
 
-async fn play_pause(state: Arc<RwLock<AppState>>, pause: bool) {
-    let r_state = state.read().await;
-    if (!pause && !r_state.is_playing) || (pause && r_state.is_playing) {
-        drop(r_state);
+async fn play_pause(state: AppState, pause: bool) {
+    let is_playing = state.is_playing.read().await;
+    if (!pause && !(*is_playing)) || (pause && *is_playing) {
+        drop(is_playing);
 
         println!(
             "[{}] {}",
@@ -215,13 +215,10 @@ async fn play_pause(state: Arc<RwLock<AppState>>, pause: bool) {
             if pause { "Pausing..." } else { "Playing..." }
         );
 
-        let mut w_state = state.write().await;
+        let mut enigo = state.enigo.write().await;
+        let mut is_playing = state.is_playing.write().await;
         // simulate media play/pause key press
-        w_state.enigo.key_click(Key::MediaPlayPause);
-        w_state.is_playing = !pause;
-
-        drop(w_state);
-    } else {
-        drop(r_state);
+        enigo.key_click(Key::MediaPlayPause);
+        *is_playing = !pause;
     }
 }
