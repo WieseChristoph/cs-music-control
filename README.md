@@ -9,10 +9,7 @@
 
 ## Description
 
-This program expects that your background music is already playing. It will pause the music when a round starts and unpause when you are dead or in between rounds. It simulates pressing of the media-keys so make sure they do what they should.
-
-> [!WARNING]
-> This program does not detect quitting from matches, so it will stay in the state it was before quitting.
+This program expects that your background music is already playing. It will pause the music when a round starts and unpause when you are dead, in the menu/console or in between rounds. It simulates pressing of the media-keys so make sure they do what they should.
 
 ## Usage
 
